@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>25572 | İletişim</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background: radial-gradient(circle at 10% 20%, #0a0f1e, #03050b); min-height: 100vh; padding: 24px 16px; }
+        .park-card { max-width: 800px; margin: 0 auto; background: rgba(12, 18, 34, 0.85); backdrop-filter: blur(12px); border-radius: 2rem; border: 1px solid rgba(255, 215, 0, 0.4); padding: 1.5rem 1.3rem 2rem; }
+        .title-section { text-align: center; margin-bottom: 1.5rem; }
+        .title-section h1 { font-size: 2.8rem; font-weight: 800; background: linear-gradient(135deg, #FFDD88, #FFAA33); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .admin-badge { background: #ff0000aa; border-radius: 20px; padding: 4px 12px; font-size: 0.7rem; display: inline-block; margin-top: 6px; color: white; }
+        .menu-tabs { display: flex; gap: 12px; margin-bottom: 28px; background: #0e1327; padding: 8px; border-radius: 60px; }
+        .tab-btn { flex: 1; background: transparent; border: none; padding: 12px 0; font-weight: bold; border-radius: 40px; cursor: pointer; color: #cbd5ff; }
+        .tab-btn.active { background: linear-gradient(95deg, #f5b042, #ffd966); color: #0f0f1c; }
+        .panel { display: none; }
+        .panel.active-panel { display: block; }
+        .message-box, .qa-card, .ticket-card { background: #0c1124dd; border-radius: 1.2rem; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid #ffc107; position: relative; }
+        .engelli-mesaj { opacity: 0.5; background: #2a1a1a; border-left-color: #ff4444; }
+        .admin-mesaj { border-left-color: #ff4444; background: #2a1a3a; }
+        .ai-mesaj { border-left-color: #22c55e; background: #1a2a1a; }
+        .admin-controls { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; }
+        .admin-btn { background: #ff4444; border: none; color: white; padding: 4px 8px; border-radius: 8px; cursor: pointer; font-size: 11px; }
+        .admin-btn.sil { background: #aa2222; }
+        .admin-btn.engel { background: #ff6600; }
+        .user-name { color: #ffcd7e; font-weight: bold; font-size: 0.9rem; }
+        .admin-name { color: #ff6666; font-weight: bold; font-size: 0.9rem; }
+        .ai-name { color: #22c55e; font-weight: bold; font-size: 0.9rem; }
+        .timestamp { color: #6a7aa3; font-size: 0.7rem; margin-left: 10px; }
+        .msg-text { margin-top: 8px; color: #eef4ff; word-break: break-word; }
+        .input-group { margin: 20px 0 12px; }
+        input, textarea { width: 100%; background: #0f162b; border: 1px solid #2e3a5e; padding: 12px 14px; border-radius: 28px; color: white; font-size: 0.9rem; outline: none; }
+        button.btn-send { background: #ffcd4a; border: none; padding: 10px 18px; border-radius: 40px; font-weight: bold; cursor: pointer; margin-top: 6px; }
+        .empty-message { color: #a0a9c5; text-align: center; padding: 30px 10px; }
+        .small-note { font-size: 0.7rem; text-align: center; color: #6f7c9e; margin-top: 1rem; }
+        .admin-panel { background: #1a1f3a; border-radius: 20px; padding: 12px; margin-bottom: 16px; border: 1px solid #ffaa33; }
+        .engelli-liste { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .engelli-chip { background: #ff4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+        .engelli-chip button { background: white; border: none; border-radius: 20px; padding: 2px 8px; cursor: pointer; }
+        .online-section { margin-top: 20px; padding: 15px; background: #0a0f1e; border-radius: 20px; border: 1px solid #ffaa3344; display: none; }
+        .online-section h4 { color: #ffaa33; margin-bottom: 12px; font-size: 14px; }
+        .online-listesi { display: flex; flex-wrap: wrap; gap: 10px; }
+        .online-kisi { background: #1a2744; padding: 5px 12px; border-radius: 25px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+        .online-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: yanipSon 1.5s infinite; }
+        @keyframes yanipSon { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .kisi-isim { color: #e5e7eb; }
+        .copyright-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 215, 0, 0.15); text-align: center; }
+        .copyright-text { font-size: 0.8rem; color: #ffcd4a; font-weight: 600; }
+        .giris-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .giris-kutu { background: #111827; padding: 30px; border-radius: 20px; border: 1px solid #ffd966; max-width: 400px; width: 90%; }
+        .giris-kutu h2 { color: #ffd966; text-align: center; margin-bottom: 20px; }
+        .giris-kutu input { margin-bottom: 12px; }
+        .giris-kutu button { width: 100%; padding: 12px; background: #ffd966; border: none; border-radius: 25px; font-weight: bold; cursor: pointer; }
+        .giris-notu { font-size: 11px; color: #6b7280; text-align: center; margin-top: 12px; }
+    </style>
+</head>
+<body>
+
+<div id="girisModal" class="giris-modal">
+    <div class="giris-kutu">
+        <h2>🔐 GİRİŞ</h2>
+        <input type="text" id="girisIsim" placeholder="İsminiz" autocomplete="off">
+        <input type="password" id="girisSifre" placeholder="Şifreniz" autocomplete="off">
+        <button onclick="girisYap()">GİRİŞ YAP</button>
+        <div class="giris-notu">
+            ⚠️ Şifrenizi kimseyle paylaşmayın!<br>
+            Aynı cihazdan en fazla 2 hesap açabilirsiniz.
+        </div>
+    </div>
+</div>
+
+<div class="park-card" id="anaSite" style="display:none;">
+    <div class="title-section">
+        <h1>25572</h1>
+        <div id="adminStatus"></div>
+        <div class="sub">💬 canlı iletişim | @ai ile yapay zeka</div>
+    </div>
+
+    <div class="menu-tabs">
+        <button class="tab-btn active" data-tab="chat">💬 SOHBET</button>
+        <button class="tab-btn" data-tab="qa">❓ SORU-CEVAP</button>
+        <button class="tab-btn" data-tab="support">🔧 SORUN ÇÖZÜM</button>
+    </div>
+
+    <div id="chatPanel" class="panel active-panel">
+        <div id="adminChatPanel" class="admin-panel" style="display:none;">
+            <div style="font-weight:bold; color:#ffaa33;">🛡️ ADMIN PANELİ</div>
+            <div style="font-size:13px; margin-top:8px;">🚫 Engellenen Kullanıcılar:</div>
+            <div id="engelliListe" class="engelli-liste"></div>
+        </div>
+        <div id="chatMessagesArea" style="max-height: 340px; overflow-y: auto; margin-bottom: 12px;">
+            <div class="empty-message">📡 mesajlar yükleniyor...</div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="chatNick" placeholder="İsminiz" readonly>
+            <textarea id="chatMsg" rows="2" placeholder="Mesajınız... (@ai yazarsan AI cevap verir)"></textarea>
+            <button class="btn-send" onclick="mesajGonder('sohbet')">📤 GÖNDER</button>
+        </div>
+    </div>
+
+    <div id="qaPanel" class="panel">
+        <div id="qaListArea" style="max-height: 340px; overflow-y: auto;">
+            <div class="empty-message">📭 hiç soru yok</div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="qaName" placeholder="İsminiz" readonly>
+            <textarea id="qaQuestion" rows="2" placeholder="Sorunuz..."></textarea>
+            <button class="btn-send" onclick="mesajGonder('soru')">❔ SORU GÖNDER</button>
+        </div>
+    </div>
+
+    <div id="supportPanel" class="panel">
+        <div id="ticketListArea" style="max-height: 340px; overflow-y: auto;">
+            <div class="empty-message">⚠️ sorun yok</div>
+        </div>
+        <div class="input-group">
+            <input type="text" id="ticketUser" placeholder="İsminiz" readonly>
+            <textarea id="ticketDesc" rows="2" placeholder="Sorununuz..."></textarea>
+            <button class="btn-send" onclick="mesajGonder('sorun')">⚠️ BİLDİR</button>
+        </div>
+    </div>
+
+    <div class="small-note">🔄 Otomatik yenilenme: 5 sn | 🤖 @ai ile AI'ya sor</div>
+
+    <div id="onlineSection" class="online-section">
+        <h4>🟡 ŞU ANDA AKTİF OLANLAR</h4>
+        <div id="onlineListesi" class="online-listesi">
+            <div style="color:#6b7280; font-size:12px;">Yükleniyor...</div>
+        </div>
+    </div>
+
+    <div class="copyright-section">
+        <div class="copyright-text">© 2026 Ahmet Mustafa Böber. Tüm Hakları Saklıdır.</div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = 'https://nkstpdqekhzwrwrwjkehy.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rc3RwZHFla2h6d3dyd2tqZWh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2ODcxNDAsImV4cCI6MjEwNjI2MzE0MH0.MxrwvcBat2dWPPCfFxEnkqhKGPNPEOCUmy1BoF_70k0';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    
+    const ADMIN_SIFRE = "57225";
+    const MAX_HESAP = 2;
+    
+    let cihazID = localStorage.getItem('cihazID_25572');
+    if(!cihazID) { cihazID = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); localStorage.setItem('cihazID_25572', cihazID); }
+    
+    let adminMode = false;
+    let aktifKullanici = null;
+    let engelliCihazlar = JSON.parse(localStorage.getItem('engelliListe_cihaz_25572') || '[]');
+    let cihazHesaplari = JSON.parse(localStorage.getItem('cihazHesaplari_' + cihazID) || '[]');
+    
+    function saveEngelliListe() { localStorage.setItem('engelliListe_cihaz_25572', JSON.stringify(engelliCihazlar)); }
+    function saveCihazHesaplari() { localStorage.setItem('cihazHesaplari_' + cihazID, JSON.stringify(cihazHesaplari)); }
+    
+    function girisYap() {
+        const isim = document.getElementById('girisIsim').value.trim();
+        const sifre = document.getElementById('girisSifre').value.trim();
+        if(!isim || !sifre) { alert("İsim ve şifre girin!"); return; }
+        
+        if(sifre === ADMIN_SIFRE) {
+            adminMode = true;
+            aktifKullanici = { isim: "ADMIN", sifre: sifre };
+            girisSonrasi();
+            return;
+        }
+        
+        let mevcutHesap = cihazHesaplari.find(h => h.isim === isim);
+        if(mevcutHesap) {
+            if(mevcutHesap.sifre === sifre) { aktifKullanici = { isim: isim, sifre: sifre }; girisSonrasi(); return; }
+            else { alert("❌ Şifre yanlış!"); return; }
+        }
+        
+        if(cihazHesaplari.length >= MAX_HESAP) { alert(`⛔ Bu cihazdan maksimum ${MAX_HESAP} hesap açılabilir!`); return; }
+        
+        cihazHesaplari.push({ isim: isim, sifre: sifre });
+        saveCihazHesaplari();
+        aktifKullanici = { isim: isim, sifre: sifre };
+        girisSonrasi();
+    }
+    
+    function girisSonrasi() {
+        document.getElementById('girisModal').style.display = 'none';
+        document.getElementById('anaSite').style.display = 'block';
+        document.getElementById('chatNick').value = aktifKullanici.isim;
+        document.getElementById('qaName').value = aktifKullanici.isim;
+        document.getElementById('ticketUser').value = aktifKullanici.isim;
+        
+        if(adminMode) {
+            document.getElementById('adminStatus').innerHTML = '<div class="admin-badge">👑 ADMIN AKTİF</div>';
+            document.getElementById('adminChatPanel').style.display = 'block';
+            document.getElementById('onlineSection').style.display = 'block';
+            renderEngelliListe();
+        } else {
+            document.getElementById('adminStatus').innerHTML = '<div style="color:#aaa; font-size:12px;">👤 ' + aktifKullanici.isim + '</div>';
+        }
+        siteBaslat();
+    }
+    
+    function renderEngelliListe() {
+        const c = document.getElementById('engelliListe');
+        if(!c) return;
+        if(engelliCihazlar.length === 0) { c.innerHTML = '<span style="color:#aaa;">Henüz engellenen yok</span>'; return; }
+        let h = '';
+        engelliCihazlar.forEach(ci => { let k = ci.length > 20 ? ci.substring(0,15)+'...' : ci; h += `<div class="engelli-chip">🚫 ${k}<button onclick="engelKaldir('${ci}')">✖️</button></div>`; });
+        c.innerHTML = h;
+    }
+    
+    function engelKaldir(cid) {
+        engelliCihazlar = engelliCihazlar.filter(id => id !== cid);
+        saveEngelliListe(); renderEngelliListe(); mesajlariGetir('sohbet'); onlineListeyiGuncelle();
+        alert(`✅ Engel kaldırıldı.`);
+    }
+    
+    async function kullaniciEngelle(mesajId, isim) {
+        if(!adminMode) return;
+        try {
+            const { data } = await supabase.from('mesajlar').select('cihaz_id').eq('id', mesajId).single();
+            const hedef = data.cihaz_id;
+            if(!hedef || hedef === cihazID) { alert("Olmaz!"); return; }
+            if(!engelliCihazlar.includes(hedef)) {
+                engelliCihazlar.push(hedef); saveEngelliListe(); renderEngelliListe(); mesajlariGetir('sohbet'); onlineListeyiGuncelle();
+                alert(`🚫 ${isim} engellendi!`);
+            } else alert(`${isim} zaten engelli.`);
+        } catch(e) { alert("Hata"); }
+    }
+    
+    async function mesajSil(id) {
+        if(!adminMode) return;
+        if(confirm("Sil?")) {
+            await supabase.from('mesajlar').delete().eq('id', id);
+            mesajlariGetir('sohbet'); alert("Silindi!");
+        }
+    }
+    
+    function getTimeNow() { const n = new Date(); return `${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}`; }
+    function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    
+    async function onlineListeyiGuncelle() {
+        if(!adminMode) return;
+        try {
+            const { data } = await supabase.from('mesajlar').select('yazan, cihaz_id').eq('tip', 'sohbet');
+            const aktif = new Map();
+            (data || []).forEach(m => { if(m.cihaz_id && !engelliCihazlar.includes(m.cihaz_id)) aktif.set(m.cihaz_id, m.yazan); });
+            
+            const c = document.getElementById('onlineListesi');
+            if(aktif.size === 0) { c.innerHTML = '<div style="color:#6b7280; font-size:12px;">Kimse yok</div>'; return; }
+            let h = '';
+            for(let [cid, isim] of aktif) h += `<div class="online-kisi"><span class="online-dot"></span><span class="kisi-isim">${escapeHtml(isim)}</span></div>`;
+            c.innerHTML = h;
+        } catch(e) { console.error(e); }
+    }
+    
+    async function aiCevapAl(mesaj) {
+        try {
+            const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(mesaj)}?model=openai`);
+            const aiCevap = await response.text();
+            await supabase.from('mesajlar').insert({ tip: 'sohbet', yazan: '🤖 AI Asistan', mesaj: aiCevap, cihaz_id: 'ai_bot', zaman: getTimeNow(), is_admin: false });
+            mesajlariGetir('sohbet');
+        } catch(e) { console.error(e); }
+    }
+    
+    async function mesajGonder(tip) {
+        if(!aktifKullanici) return;
+        if(engelliCihazlar.includes(cihazID)) { alert("❌ Engellendiniz!"); return; }
+        
+        let mesaj = '', yazan = aktifKullanici.isim;
+        if(tip === 'sohbet') mesaj = document.getElementById('chatMsg').value.trim();
+        else if(tip === 'soru') mesaj = document.getElementById('qaQuestion').value.trim();
+        else if(tip === 'sorun') mesaj = document.getElementById('ticketDesc').value.trim();
+        if(!mesaj) { alert("Yazın!"); return; }
+        
+        const { error } = await supabase.from('mesajlar').insert({ tip, yazan, mesaj, cihaz_id: cihazID, zaman: getTimeNow(), is_admin: adminMode });
+        if(error) { alert("Hata: " + error.message); return; }
+        
+        if(tip === 'sohbet') { document.getElementById('chatMsg').value = ''; mesajlariGetir('sohbet'); if(adminMode) onlineListeyiGuncelle(); }
+        else if(tip === 'soru') { document.getElementById('qaQuestion').value = ''; mesajlariGetir('soru'); }
+        else if(tip === 'sorun') { document.getElementById('ticketDesc').value = ''; mesajlariGetir('sorun'); }
+        
+        if(tip === 'sohbet' && (mesaj.startsWith('@ai') || mesaj.startsWith('!ai'))) {
+            const temiz = mesaj.replace('@ai','').replace('!ai','').trim();
+            if(temiz) aiCevapAl(temiz);
+        }
+    }
+    
+    async function mesajlariGetir(tip) {
+        try {
+            const { data, error } = await supabase.from('mesajlar').select('*').eq('tip', tip).order('id', { ascending: false }).limit(60);
+            if(error) { console.error(error); return; }
+            
+            let container, emptyMsg;
+            if(tip === 'sohbet') { container = document.getElementById('chatMessagesArea'); emptyMsg = '💬 Mesaj yok'; }
+            else if(tip === 'soru') { container = document.getElementById('qaListArea'); emptyMsg = '❓ Soru yok'; }
+            else { container = document.getElementById('ticketListArea'); emptyMsg = '⚠️ Sorun yok'; }
+            
+            if(!data || data.length === 0) { container.innerHTML = '<div class="empty-message">' + emptyMsg + '</div>'; return; }
+            
+            let html = '';
+            for(let msg of data) {
+                const engelliMi = msg.cihaz_id && engelliCihazlar.includes(msg.cihaz_id);
+                if(engelliMi && !adminMode) continue;
+                const adminMi = msg.is_admin === true;
+                const aiMi = msg.cihaz_id === 'ai_bot';
+                
+                let cls = '', isimCls = 'user-name', icon = '';
+                if(engelliMi) cls += ' engelli-mesaj';
+                if(adminMi) { cls += ' admin-mesaj'; isimCls = 'admin-name'; icon = '👑 '; }
+                if(aiMi) { cls += ' ai-mesaj'; isimCls = 'ai-name'; icon = '🤖 '; }
+                
+                html += `<div class="message-box${cls}">
+                            <div><span class="${isimCls}">${icon}${escapeHtml(msg.yazan)}</span><span class="timestamp">🕒 ${msg.zaman || '??'}</span></div>
+                            <div class="msg-text">${escapeHtml(msg.mesaj)}</div>`;
+                if(adminMode && !aiMi && tip === 'sohbet') {
+                    html += `<div class="admin-controls">
+                                <button class="admin-btn sil" onclick="mesajSil('${msg.id}')">🗑️</button>
+                                <button class="admin-btn engel" onclick="kullaniciEngelle('${msg.id}', '${escapeHtml(msg.yazan)}')">🚫</button>
+                            </div>`;
+                }
+                html += `</div>`;
+            }
+            container.innerHTML = html;
+            if(adminMode && tip === 'sohbet') onlineListeyiGuncelle();
+        } catch(e) { console.error(e); }
+    }
+    
+    function setupTabs() {
+        const btns = document.querySelectorAll('.tab-btn');
+        const panels = { chat: document.getElementById('chatPanel'), qa: document.getElementById('qaPanel'), support: document.getElementById('supportPanel') };
+        btns.forEach(btn => {
+            btn.onclick = () => {
+                const tab = btn.getAttribute('data-tab');
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                Object.values(panels).forEach(p => p.classList.remove('active-panel'));
+                panels[tab].classList.add('active-panel');
+                if(tab === 'chat') mesajlariGetir('sohbet');
+                if(tab === 'qa') mesajlariGetir('soru');
+                if(tab === 'support') mesajlariGetir('sorun');
+            };
+        });
+    }
+    
+    function siteBaslat() {
+        mesajlariGetir('sohbet');
+        mesajlariGetir('soru');
+        mesajlariGetir('sorun');
+        setInterval(() => {
+            const aktif = document.querySelector('.tab-btn.active').getAttribute('data-tab');
+            if(aktif === 'chat') mesajlariGetir('sohbet');
+            if(aktif === 'qa') mesajlariGetir('soru');
+            if(aktif === 'support') mesajlariGetir('sorun');
+        }, 5000);
+    }
+    
+    window.onload = () => { setupTabs(); };
+    window.girisYap = girisYap;
+    window.mesajGonder = mesajGonder;
+    window.mesajSil = mesajSil;
+    window.kullaniciEngelle = kullaniciEngelle;
+    window.engelKaldir = engelKaldir;
+</script>
+</body>
+</html>
